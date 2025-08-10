@@ -1,0 +1,23 @@
+# Netlify configuration for Next.js
+[build]
+  command = "pnpm exec @netlify/next"
+  publish = ".next"
+
+[dev]
+  command = "pnpm dev"
+
+[build.environment]
+  NEXT_PUBLIC_SITE_URL = "https://your-site.netlify.app"
+
+# Optional: Redirect all requests to Next.js
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/next_api"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/next"
+  status = 200
+  force = true

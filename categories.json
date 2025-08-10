@@ -1,0 +1,27 @@
+﻿
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : [{"id":"B8CC7D3D-DFDA-4A17-8918-2429801FAF1C","name":"Bombs 
+                    ","description":"Sound crackers and bombs","image_url":"/placeholder
+                    .svg?height=200&width=200&text=Bombs%20","created_at":"2025-08-07T10
+                    :42:...
+RawContent        : HTTP/1.1 200 OK
+                    vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, 
+                    Next-Router-Segment-Prefetch
+                    Connection: keep-alive
+                    Keep-Alive: timeout=5
+                    Transfer-Encoding: chunked
+                    Content-Type: text/pl...
+Forms             : {}
+Headers           : {[vary, RSC, Next-Router-State-Tree, Next-Router-Prefetch, 
+                    Next-Router-Segment-Prefetch], [Connection, keep-alive], 
+                    [Keep-Alive, timeout=5], [Transfer-Encoding, chunked]...}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 1513
+
+
+
