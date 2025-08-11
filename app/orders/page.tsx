@@ -21,39 +21,43 @@ import Footer from '@/components/layout/footer'
 import { Package, Upload, Download, Eye, CreditCard, Truck, MapPin } from 'lucide-react'
 import { generateOrderPDF } from '@/lib/pdf-export'
 
+interface OrderItem {
+  id: string;
+  quantity: number;
+  price: number;
+  products: {
+    id: string;
+    name: string;
+    image_url: string;
+  };
+  isModified?: boolean;
+  isNew?: boolean;
+}
+
 interface Order {
-  id: string
-  total_amount: number
-  discount_amount: number
-  final_amount: number
-  status: string
-  delivery_address: string
-  delivery_pincode: string
-  payment_screenshot_url: string | null
-  bank_reference_number: string | null
-  courier_partner: string | null
-  tracking_number: string | null
-  courier_bill_url: string | null
-  created_at: string
-  promocode_id: string | null
-  delivery_name?: string
-  delivery_email?: string
-  delivery_phone?: string
+  id: string;
+  total_amount: number;
+  discount_amount: number;
+  final_amount: number;
+  status: string;
+  delivery_address: string;
+  delivery_pincode: string;
+  payment_screenshot_url: string | null;
+  bank_reference_number: string | null;
+  courier_partner: string | null;
+  tracking_number: string | null;
+  courier_bill_url: string | null;
+  created_at: string;
+  promocode_id: string | null;
+  delivery_name?: string;
+  delivery_email?: string;
+  delivery_phone?: string;
   promocodes?: {
-    code: string
-    discount_percentage: number
-  }
-  order_items: {
-    id: string
-    quantity: number
-    price: number
-    products: {
-      id: string
-      name: string
-      image_url: string
-    }
-  }[]
-  items_modified?: boolean
+    code: string;
+    discount_percentage: number;
+  };
+  order_items: OrderItem[];
+  items_modified?: boolean;
 }
 
 export default function OrdersPage() {
@@ -262,13 +266,36 @@ export default function OrdersPage() {
           <div className="space-y-6">
             {orders.map((order) => (
             <Card key={order.id} className="overflow-hidden">
+                {/* Notification Banner for updated items */}
+                {order.order_items.some(item => item.isModified || item.isNew) && (
+                  <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 flex flex-col gap-1">
+                    <span className="font-semibold flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      This order has updated items:
+                    </span>
+                    <ul className="list-disc list-inside ml-2">
+                      {order.order_items.filter(item => item.isModified || item.isNew).map(item => (
+                        <li key={item.id}>
+                          <span className="font-medium">{item.products.name}</span>
+                          {item.isModified ? (
+                            <span className="ml-2 text-xs bg-yellow-500 text-white px-2 py-0.5 rounded">Modified</span>
+                          ) : item.isNew ? (
+                            <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded">New</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50">
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Package className="h-5 w-5" />
                         Order #{order.id.slice(-8)}
-                        {/* Optionally show a badge if you have a notification system, otherwise remove this */}
+                        {order.items_modified && (
+                          <Badge className="bg-red-600 text-white animate-pulse ml-2">Updated Items</Badge>
+                        )}
                       </CardTitle>
                       <p className="text-sm text-gray-600 mt-1">
                         Placed on {formatDate(order.created_at)}
@@ -278,9 +305,13 @@ export default function OrdersPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <Badge className={`${getStatusColor(order.status)} text-white mb-2`}>
-                        {order.status}
-                      </Badge>
+                      {order.status === 'Paid' && order.payment_screenshot_url ? (
+                        <Badge className="bg-blue-600 text-white mb-2">Payment Uploaded</Badge>
+                      ) : (
+                        <Badge className={`${getStatusColor(order.status)} text-white mb-2`}>
+                          {order.status}
+                        </Badge>
+                      )}
                       <p className="text-lg font-semibold text-orange-600">
                         {formatCurrency(order.final_amount)}
                       </p>
@@ -311,7 +342,14 @@ export default function OrdersPage() {
                               className="rounded object-cover"
                             />
                             <div className="flex-1">
-                              <p className="font-medium text-sm">{item.products.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm">{item.products.name}</p>
+                                {item.isModified ? (
+                                  <Badge className="bg-yellow-500 text-white">Modified</Badge>
+                                ) : item.isNew ? (
+                                  <Badge className="bg-green-600 text-white">New</Badge>
+                                ) : null}
+                              </div>
                               <p className="text-xs text-gray-600">
                                 Qty: {item.quantity} × {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}
                               </p>

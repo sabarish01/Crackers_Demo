@@ -86,7 +86,9 @@ export default function AdminCategoriesPage() {
         })
         if (!uploadRes.ok) throw new Error('Image upload failed')
         const uploadJson = await uploadRes.json()
-        imageUrl = uploadJson.path
+        console.log('Upload response:', uploadJson) // Log the upload response
+        // Ensure the path is correct for public access
+        imageUrl = uploadJson.path.startsWith('/upload/') ? uploadJson.path : `/upload/${uploadJson.path.replace(/^\/+/, '')}`
       } else if (isEditing && selectedCategory) {
         imageUrl = selectedCategory.image_url
       } else {
@@ -216,33 +218,33 @@ export default function AdminCategoriesPage() {
           <table className="min-w-full bg-white border border-gray-200 rounded-lg">
             <thead>
               <tr>
-                <th className="px-4 py-2 border-b">Image</th>
-                <th className="px-4 py-2 border-b">Name</th>
-                <th className="px-4 py-2 border-b">Description</th>
-                <th className="px-4 py-2 border-b">Actions</th>
+                <th className="px-4 py-2 border-b text-center">Image</th>
+                <th className="px-4 py-2 border-b text-center">Name</th>
+                <th className="px-4 py-2 border-b text-center">Description</th>
+                <th className="px-4 py-2 border-b text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredCategories.map((category) => (
                 <tr key={category.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 text-center">
                     <Image
                       src={category.image_url || "/placeholder.svg"}
                       alt={category.name}
                       width={60}
                       height={60}
-                      className="object-cover rounded"
+                      className="object-cover rounded mx-auto"
                     />
                   </td>
-                  <td className="px-4 py-2 font-semibold">{category.name}</td>
-                  <td className="px-4 py-2 text-gray-600">{category.description}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex gap-2">
+                  <td className="px-4 py-2 font-semibold text-center">{category.name}</td>
+                  <td className="px-4 py-2 text-gray-600 text-center">{category.description}</td>
+                  <td className="px-4 py-2 text-center">
+                    <div className="flex gap-2 justify-center">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(category)}
-                        className="flex-1"
+                        className="min-w-0 px-1"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -305,46 +307,47 @@ export default function AdminCategoriesPage() {
               
               <div>
                 <Label htmlFor="image">Category Image</Label>
-                <div className="mt-2">
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
-                    className="mb-2"
-                  />
-                  {isEditing && selectedCategory?.image_url && !formData.image && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600 mb-2">Current image:</p>
-                      <div className="flex items-center gap-2">
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files?.[0] || null;
+                    setFormData(prev => ({ ...prev, image: file }));
+                  }}
+                />
+                {/* Image preview and image action buttons below file input */}
+                {(formData.image || (isEditing && selectedCategory?.image_url)) && (
+                  <div className="flex items-center gap-4 mt-2">
+                    {(formData.image || selectedCategory?.image_url) && (
+                      <>
                         <Image
-                          src={selectedCategory.image_url || "/placeholder.svg"}
-                          alt="Current category image"
-                          width={100}
-                          height={100}
-                          className="rounded object-cover"
+                          src={formData.image ? URL.createObjectURL(formData.image) : selectedCategory?.image_url || "/placeholder.svg"}
+                          alt={formData.name || selectedCategory?.name || "Category Image"}
+                          width={120}
+                          height={120}
+                          className="object-cover rounded border"
+                          onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
                         />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, image: null }));
-                            setSelectedCategory(prev => prev ? { ...prev, image_url: '' } : prev);
-                          }}
-                        >
-                          Delete Image
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {formData.image && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600 mb-2">New image selected:</p>
-                      <p className="text-sm font-medium">{formData.image.name}</p>
-                    </div>
-                  )}
-                </div>
+                        {(
+                          (formData.image) ||
+                          (selectedCategory?.image_url && !selectedCategory.image_url.startsWith('/placeholder.svg'))
+                        ) && (
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                            >
+                              Delete Image
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="flex gap-2 pt-4">

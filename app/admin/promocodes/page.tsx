@@ -100,47 +100,95 @@ export default function AdminPromocodesPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    console.log('handleSubmit function triggered'); // Log to confirm execution
+
+    // Client-side validation
+    if (!formData.code.trim()) {
+      toast({ title: 'Error', description: 'Promocode is required', variant: 'destructive' });
+      return;
+    }
+    if (!formData.discount_percentage || isNaN(Number(formData.discount_percentage)) || Number(formData.discount_percentage) < 1 || Number(formData.discount_percentage) > 100) {
+      toast({ title: 'Error', description: 'Discount percentage must be a number between 1 and 100', variant: 'destructive' });
+      return;
+    }
+    if (!formData.min_order_value || isNaN(Number(formData.min_order_value)) || Number(formData.min_order_value) < 0) {
+      toast({ title: 'Error', description: 'Minimum order value must be a non-negative number', variant: 'destructive' });
+      return;
+    }
+    if (!formData.expiry_date) {
+      toast({ title: 'Error', description: 'Expiry date is required', variant: 'destructive' });
+      return;
+    }
     try {
       const promocodeData = {
         code: formData.code.toUpperCase(),
         discount_percentage: parseInt(formData.discount_percentage, 10),
         min_order_value: formData.min_order_value === '' ? 0 : parseInt(formData.min_order_value, 10),
-        expiry_date: formData.expiry_date,
+        expiry_date: formData.expiry_date.split('T')[0], // Ensure only YYYY-MM-DD is sent
         is_active: formData.is_active
-      }
-      let res
+      };
+      console.log('Adding promocode with values:', promocodeData); // Log values to browser console
+      let res;
       if (isEditing && selectedPromocode) {
         res = await fetch(`/api/promocodes-admin?id=${selectedPromocode.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(promocodeData)
-        })
+        });
       } else {
         res = await fetch('/api/promocodes-admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(promocodeData)
-        })
+        });
       }
-      if (!res.ok) throw new Error('Failed to save promocode')
-      fetchPromocodes()
-      resetForm()
-      toast({
-        title: isEditing ? 'Promocode Updated' : 'Promocode Created',
-        description: `Promocode ${formData.code.toUpperCase()} ${isEditing ? 'updated' : 'created'} successfully!`,
-      })
-            setIsEditing(false)
-            setSelectedPromocode(null)
-            router.push('/admin/promocodes')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        toast({
+          title: 'Error',
+          description: errorData?.error + (errorData?.details ? `: ${errorData.details}` : '') || 'Failed to save promocode',
+          variant: 'destructive',
+        });
+        return;
+      }
+      fetchPromocodes();
+      // Only reset the form fields, do not close the dialog here
+      setFormData({
+        code: '',
+        discount_percentage: '',
+        min_order_value: '',
+        expiry_date: '',
+        is_active: true
+      });
+      setIsEditing(false);
+      setSelectedPromocode(null);
+      // Show toast and close dialog only after successful creation
+      if (res.ok) {
+        toast({
+          title: 'Success',
+          description: isEditing ? 'Promocode Updated Successfully' : 'Promocode Added Successfully',
+          variant: 'default',
+          duration: 500,
+        });
+        setDialogOpen(false);
+      } else {
+        const errorData = await res.json();
+        toast({
+          title: 'Error',
+          description: errorData.error || 'An unexpected error occurred.',
+          duration: 5000,
+        });
+      }
+      router.push('/admin/promocodes');
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Failed to save promocode',
         variant: 'destructive',
-      })
+      });
     }
-  }
+  } 
 
   const handleDelete = async (promocodeId: string) => {
     if (!confirm('Are you sure you want to delete this promocode?')) return
@@ -195,6 +243,12 @@ export default function AdminPromocodesPage() {
     promocode.code.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Utility to format date for input fields
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return '';
+    return dateString.split('T')[0];
+  };
+
   if (loading) {
     return (
       <AdminLayout title="Promocode Management">
@@ -217,19 +271,22 @@ export default function AdminPromocodesPage() {
               className="pl-10"
             />
           </div>
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm} className="bg-orange-600 hover:bg-orange-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Promocode
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-describedby="promocode-dialog-desc">
               <DialogHeader>
                 <DialogTitle>
                   {isEditing ? 'Edit Promocode' : 'Add New Promocode'}
                 </DialogTitle>
               </DialogHeader>
+              <div id="promocode-dialog-desc" className="sr-only">
+                Fill out the form to add or edit a promocode.
+              </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="code">Promocode</Label>
@@ -275,7 +332,7 @@ export default function AdminPromocodesPage() {
                   <Input
                     id="expiry"
                     type="date"
-                    value={formData.expiry_date}
+                    value={formatDateForInput(formData.expiry_date)}
                     onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
                     required
                   />
@@ -308,7 +365,7 @@ export default function AdminPromocodesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Tag className="h-5 w-5" />
+              <Tag className="h-5 w-5" /> {/* Replace with a relevant icon for promocodes */}
               Promocodes ({filteredPromocodes.length})
             </CardTitle>
           </CardHeader>
@@ -374,92 +431,13 @@ export default function AdminPromocodesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(promocode)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit Promocode</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                  <Label htmlFor="edit-code">Promocode</Label>
-                                  <Input
-                                    id="edit-code"
-                                    value={formData.code}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                                    placeholder="e.g., DIWALI2024"
-                                    required
-                                  />
-                                </div>
-                                
-                                <div>
-                                  <Label htmlFor="edit-discount">Discount Percentage</Label>
-                                  <Input
-                                    id="edit-discount"
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    step="0.01"
-                                    value={formData.discount_percentage}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, discount_percentage: e.target.value }))}
-                                    placeholder="e.g., 15"
-                                    required
-                                  />
-                                </div>
-                                
-                                <div>
-                                  <Label htmlFor="edit-min-order-value">Minimum Order Value</Label>
-                                  <Input
-                                    id="edit-min-order-value"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={formData.min_order_value}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, min_order_value: e.target.value }))}
-                                    placeholder="e.g., 500"
-                                  />
-                                </div>
-                                
-                                <div>
-                                  <Label htmlFor="edit-expiry">Expiry Date</Label>
-                                  <Input
-                                    id="edit-expiry"
-                                    type="date"
-                                    value={formData.expiry_date}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
-                                    required
-                                  />
-                                </div>
-                                
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id="edit-active"
-                                    checked={formData.is_active}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                                  />
-                                  <Label htmlFor="edit-active">Active</Label>
-                                </div>
-                                
-                                <div className="flex gap-2 pt-4">
-                                  <Button type="submit" className="bg-orange-600 hover:bg-orange-700">
-                                    Update Promocode
-                                  </Button>
-                                  <Button type="button" variant="outline" onClick={resetForm}>
-                                    Cancel
-                                  </Button>
-                                </div>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(promocode)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                           
                           <Button
                             variant="outline"

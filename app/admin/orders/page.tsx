@@ -47,6 +47,8 @@ interface Order {
     phone: string
   }
   order_items: OrderItem[]
+  payment_screenshot_url?: string | null
+  bank_reference_number?: string | null
 }
 
 interface Product {
@@ -204,6 +206,9 @@ export default function AdminOrdersPage() {
         courierBillImageUrl = data.path || data.imageUrl;
       }
 
+      // Determine if any item is new or modified
+      const itemsModified = editingItems.some(item => item.isNew || item.isModified);
+
       // Call API to update order items, totals, and track details
       const response = await fetch('/api/orders', {
         method: 'PUT',
@@ -221,7 +226,8 @@ export default function AdminOrdersPage() {
           discount_amount: selectedOrder.discount_amount,
           courier_partner: courierPartner,
           tracking_number: trackingNumber,
-          courier_bill_image: courierBillImageUrl
+          courier_bill_image: courierBillImageUrl,
+          items_modified: itemsModified
         })
       })
       if (!response.ok) throw new Error('Failed to update order')
@@ -426,15 +432,13 @@ export default function AdminOrdersPage() {
                               className="rounded-full border-2 border-white"
                             />
                           ))}
-                          {order.order_items.length > 3 && (
-                            <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs">
-                              +{order.order_items.length - 3}
-                            </div>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(order.final_amount)}
+                        {formatCurrency(
+                          order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                          - (order.discount_amount || 0)
+                        )}
                       </TableCell>
                       <TableCell>
                         <Select
@@ -447,107 +451,131 @@ export default function AdminOrdersPage() {
                           <SelectContent>
                             <SelectItem value="Pending">Pending</SelectItem>
                             <SelectItem value="Accepted">Accepted</SelectItem>
+                            <SelectItem value="Paid">Paid</SelectItem>
                             <SelectItem value="Shipped">Shipped</SelectItem>
                             <SelectItem value="Delivered">Delivered</SelectItem>
                             <SelectItem value="Cancelled">Cancelled</SelectItem>
                           </SelectContent>
                         </Select>
+                        {order.status === 'Accepted' && order.payment_screenshot_url && (
+                          <div className="mt-2">
+                            <Badge className="bg-blue-600 text-white">Payment Uploaded</Badge>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         {new Date(order.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          {order.status === 'Pending' && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditOrder(order)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>Edit Order #{order.id.slice(-8)}</DialogTitle>
-                                </DialogHeader>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditOrder(order)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Edit Order #{order.id.slice(-8)}</DialogTitle>
+                              </DialogHeader>
                                 <div className="space-y-6">
-                                  {/* Order Items (edit only before Shipped) */}
-                                  <div>
-                                    <h4 className="font-semibold mb-4">Order Items</h4>
-                                    <div className="space-y-2">
-                                      {editingItems.map((item) => (
-                                        <div 
-                                          key={item.id} 
-                                          className={`flex items-center gap-4 p-3 border rounded ${
-                                            item.isModified ? 'bg-orange-50 border-orange-200' : 
-                                            item.isNew ? 'bg-green-50 border-green-200' : 'bg-white'
-                                          }`}
-                                        >
-                                          <Image
-                                            src={item.products.image_url || "/placeholder.svg"}
-                                            alt={item.products.name}
-                                            width={50}
-                                            height={50}
-                                            className="rounded object-cover"
-                                          />
-                                          <div className="flex-1">
-                                            <p className="font-medium">{item.products.name}</p>
-                                            <p className="text-sm text-gray-600">
-                                              {formatCurrency(item.price)} each
-                                            </p>
-                                            {item.isModified && (
-                                              <Badge variant="outline" className="text-orange-600 border-orange-200">
-                                                Modified
-                                              </Badge>
-                                            )}
-                                            {item.isNew && (
-                                              <Badge variant="outline" className="text-green-600 border-green-200">
-                                                New Item
-                                              </Badge>
-                                            )}
+                                  {/* Order Items and Payment Summary (combined section) */}
+                                  <section>
+                                    <div className="space-y-6">
+                                      {/* Items Details */}
+                                      <div>
+                                        <h4 className="font-semibold mb-3">Items Details</h4>
+                                        <div className="bg-gray-50 border rounded-lg p-4 mb-4">
+                                          <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs font-semibold text-gray-600">
+                                            <div className="col-span-6">Product</div>
+                                            <div className="col-span-3 text-center">Quantity</div>
+                                            <div className="col-span-2 text-right">Actions</div>
+                                            <div className="col-span-1 text-right">Price</div>
                                           </div>
-                                          <div className="flex items-center gap-2">
-                                            <Button
-                                              variant="outline"
-                                              size="icon"
-                                              onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
-                                              disabled={item.quantity <= 1 || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
-                                            >
-                                              <Minus className="h-4 w-4" />
-                                            </Button>
-                                            <span className="w-12 text-center font-medium">
-                                              {item.quantity}
-                                            </span>
-                                            <Button
-                                              variant="outline"
-                                              size="icon"
-                                              onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
-                                              disabled={item.quantity >= item.products.stock_quantity || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
-                                            >
-                                              <Plus className="h-4 w-4" />
-                                            </Button>
+                                          <div className="space-y-2">
+                                            {editingItems.map((item) => (
+                                              <div key={item.id} className="grid grid-cols-12 items-center text-sm p-2 border-b last:border-b-0">
+                                                <div className="col-span-6 truncate flex items-center gap-2">
+                                                  {item.products.name}
+                                                  {item.isModified ? (
+                                                    <Badge className="bg-yellow-500 text-white">Modified</Badge>
+                                                  ) : item.isNew ? (
+                                                    <Badge className="bg-green-600 text-white">New</Badge>
+                                                  ) : null}
+                                                </div>
+                                                <div className="col-span-3 flex items-center justify-center gap-2">
+                                                  <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                                                    disabled={item.quantity <= 1 || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
+                                                  >
+                                                    <Minus className="h-4 w-4" />
+                                                  </Button>
+                                                  <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                                  <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
+                                                    disabled={item.quantity >= item.products.stock_quantity || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
+                                                  >
+                                                    <Plus className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                                <div className="col-span-2 flex justify-end">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => removeItem(item.id)}
+                                                    className="text-red-600 hover:text-red-700"
+                                                    disabled={selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
+                                                  >
+                                                    <Trash2 className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                                <div className="col-span-1 text-right font-medium">{formatCurrency(item.price)}</div>
+                                              </div>
+                                            ))}
                                           </div>
-                                          <div className="text-right">
-                                            <p className="font-semibold">
-                                              {formatCurrency(item.price * item.quantity)}
-                                            </p>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => removeItem(item.id)}
-                                              className="text-red-600 hover:text-red-700"
-                                              disabled={selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
+                                          {/* Discount details row removed; now only in Order Summary */}
                                         </div>
-                                      ))}
+                                      </div>
+
+                                      {/* Order Summary */}
+                                      <div>
+                                        <h4 className="font-semibold mb-3">Order Summary</h4>
+                                        <div className="text-sm space-y-2">
+                                          {(() => {
+                                            const subtotal = editingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                            const discount = selectedOrder && selectedOrder.discount_amount ? selectedOrder.discount_amount : 0;
+                                            const total = subtotal - discount;
+                                            return (
+                                              <>
+                                                <div className="flex justify-between">
+                                                  <span>Subtotal:</span>
+                                                  <span>{formatCurrency(subtotal)}</span>
+                                                </div>
+                                                {discount > 0 && (
+                                                  <div className="flex justify-between text-green-600">
+                                                    <span>Discount:</span>
+                                                    <span>-{formatCurrency(discount)}</span>
+                                                  </div>
+                                                )}
+                                                <div className="flex justify-between font-semibold border-t pt-2">
+                                                  <span>Total:</span>
+                                                  <span>{formatCurrency(total)}</span>
+                                                </div>
+                                              </>
+                                            );
+                                          })()}
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
+                                  </section>
 
                                   {/* Add New Item (only before Shipped) */}
                                   {selectedOrder?.status !== 'Shipped' && selectedOrder?.status !== 'Delivered' && (
@@ -579,7 +607,8 @@ export default function AdminOrdersPage() {
                                             type="number"
                                             min="1"
                                             value={newItem.quantity}
-                                            onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                                            onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))
+                                            }
                                             className="w-20"
                                           />
                                         </div>
@@ -593,37 +622,34 @@ export default function AdminOrdersPage() {
 
                                   {/* Delivery Details (admin only) */}
                                   <div className="border-t pt-4">
-                                    <h4 className="font-semibold mb-2">Delivery Details (Admin Only)</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <Label>Delivery Address</Label>
-                                        <Input value={selectedOrder?.delivery_address || ''} readOnly />
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                      <span role="img" aria-label="delivery">🚚</span> Delivery Details
+                                    </h4>
+                                    <div className="bg-gray-50 border rounded-lg p-4 mb-4">
+                                      <div className="mb-2">
+                                        <span className="font-medium">Name:</span>
+                                        <span className="ml-2">{selectedOrder?.customers?.name || '-'}</span>
                                       </div>
-                                      <div>
-                                        <Label>Pincode</Label>
-                                        <Input value={selectedOrder?.delivery_pincode || ''} readOnly />
+                                      <div className="mb-2">
+                                        <span className="font-medium">Email:</span>
+                                        <span className="ml-2">{selectedOrder?.customers?.email || '-'}</span>
+                                      </div>
+                                      <div className="mb-2">
+                                        <span className="font-medium">Phone:</span>
+                                        <span className="ml-2">{selectedOrder?.customers?.phone || '-'}</span>
+                                      </div>
+                                      <div className="mb-2">
+                                        <span className="font-medium">Address:</span>
+                                        <span className="ml-2">{selectedOrder?.delivery_address || '-'}</span>
+                                      </div>
+                                      <div className="mb-2">
+                                        <span className="font-medium">Pincode:</span>
+                                        <span className="ml-2">{selectedOrder?.delivery_pincode || '-'}</span>
                                       </div>
                                     </div>
                                   </div>
 
-                                  {/* Payment Details (view only) */}
-                                  <div className="border-t pt-4">
-                                    <h4 className="font-semibold mb-2">Payment Details</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <Label>Total Amount</Label>
-                                        <Input value={formatCurrency(selectedOrder?.total_amount || 0)} readOnly />
-                                      </div>
-                                      <div>
-                                        <Label>Discount</Label>
-                                        <Input value={formatCurrency(selectedOrder?.discount_amount || 0)} readOnly />
-                                      </div>
-                                      <div>
-                                        <Label>Final Amount</Label>
-                                        <Input value={formatCurrency(selectedOrder?.final_amount || 0)} readOnly />
-                                      </div>
-                                    </div>
-                                  </div>
+                                
 
                                   {/* Track Details (courier info, bill upload) */}
                                   <div className="border-t pt-4">
@@ -690,15 +716,7 @@ export default function AdminOrdersPage() {
                                     {/* Only allow upload/edit/delete before Delivered, and only after Mark as Paid (add logic in next step) */}
                                   </div>
 
-                                  {/* Order Summary */}
-                                  <div className="border-t pt-4">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-lg font-semibold">Total:</span>
-                                      <span className="text-lg font-bold text-orange-600">
-                                        {formatCurrency(editingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0))}
-                                      </span>
-                                    </div>
-                                  </div>
+                                 
 
                                   <div className="flex gap-2 pt-4">
                                     <Button onClick={saveOrderChanges} className="bg-orange-600 hover:bg-orange-700">
@@ -711,7 +729,7 @@ export default function AdminOrdersPage() {
                                 </div>
                               </DialogContent>
                             </Dialog>
-                          )}
+                          
                           
                           <Button
                             variant="outline"

@@ -12,7 +12,8 @@ export async function PUT(req: NextRequest) {
       discount_amount,
       courier_partner,
       tracking_number,
-      courier_bill_image
+      courier_bill_image,
+      status
     } = body;
     if (!order_id) {
       return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
@@ -45,6 +46,15 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot update after order is shipped' }, { status: 400 });
     }
 
+    // Update status if provided and allowed
+    if (typeof status === 'string' && statusOrder.includes(status)) {
+      // Only allow forward status changes (not reverting to previous status)
+      const newStatusIndex = statusOrder.indexOf(status);
+      if (newStatusIndex > currentStatusIndex && newStatusIndex <= statusOrder.indexOf('Delivered')) {
+        await connection.query('UPDATE orders SET status = ? WHERE id = ?', [status, order_id]);
+      }
+    }
+
     // Update delivery details and tracking info
     // Prevent null for NOT NULL columns
     const safe_delivery_address = delivery_address ?? order.delivery_address;
@@ -71,8 +81,8 @@ export async function PUT(req: NextRequest) {
       await connection.query('DELETE FROM order_items WHERE order_id = ?', [order_id]);
       for (const item of items) {
         await connection.query(
-          'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
-          [item.id, order_id, item.product_id, item.quantity, item.price]
+          'INSERT INTO order_items (id, order_id, product_id, quantity, price, is_modified, is_new) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [item.id, order_id, item.product_id, item.quantity, item.price, item.isModified ? 1 : 0, item.isNew ? 1 : 0]
         );
       }
     }
@@ -122,8 +132,8 @@ export async function POST(req: NextRequest) {
     for (const item of items) {
       const orderItemId = crypto.randomUUID();
       await connection.query(
-        'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
-        [orderItemId, orderId, item.product_id, item.quantity, item.price]
+        'INSERT INTO order_items (id, order_id, product_id, quantity, price, is_modified, is_new) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [orderItemId, orderId, item.product_id, item.quantity, item.price, item.isModified ? 1 : 0, item.isNew ? 1 : 0]
       );
       // Reduce stock for the product
       await connection.query(
@@ -146,7 +156,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const customer_id = searchParams.get('customer_id');
 
-    let ordersQuery = `SELECT o.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+    let ordersQuery = `SELECT o.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone,
+      o.payment_screenshot_url, o.bank_reference_number
       FROM orders o
       JOIN customers c ON o.customer_id = c.id`;
     let queryParams: any[] = [];
@@ -162,7 +173,7 @@ export async function GET(req: NextRequest) {
     let orderItems: any[] = [];
     if (orderIds.length > 0) {
       const [itemsRows] = await connection.query(
-        `SELECT oi.*, p.id as product_id, p.name, p.image_url, p.stock_quantity
+        `SELECT oi.*, p.id as product_id, p.name, p.image_url, p.stock_quantity, oi.is_modified, oi.is_new
          FROM order_items oi
          JOIN products p ON oi.product_id = p.id
          WHERE oi.order_id IN (${orderIds.map(() => '?').join(',')})`,
@@ -180,6 +191,8 @@ export async function GET(req: NextRequest) {
         product_id: item.product_id,
         quantity: item.quantity,
         price: item.price,
+        isModified: !!item.is_modified,
+        isNew: !!item.is_new,
         products: {
           id: item.product_id,
           name: item.name,
@@ -200,6 +213,8 @@ export async function GET(req: NextRequest) {
       courier_partner: order.courier_partner,
       tracking_number: order.tracking_number,
       courier_bill_url: order.courier_bill_url,
+      payment_screenshot_url: order.payment_screenshot_url,
+      bank_reference_number: order.bank_reference_number,
       items_modified: order.items_modified === 1
     }));
     return NextResponse.json(ordersWithItems);

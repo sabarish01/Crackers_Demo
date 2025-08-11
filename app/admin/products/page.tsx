@@ -452,8 +452,8 @@ export default function AdminProductsPage() {
                           className="rounded object-cover"
                         />
                       </div>
-                      {/* Show delete icon and text to the right of the image, vertically centered */}
-                      {isEditing && selectedProduct?.image_url && imagePreview === selectedProduct.image_url && selectedProduct.image_url.indexOf('/upload/products/') !== -1 && (
+                      {/* Show delete button next to image if not a placeholder */}
+                      {imagePreview && !imagePreview.startsWith('/placeholder.svg') && (
                         <div className="flex items-center gap-1">
                           <Button
                             type="button"
@@ -462,15 +462,12 @@ export default function AdminProductsPage() {
                             title="Delete Image"
                             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
                             onClick={async () => {
-                              try {
-                                await deleteImage(selectedProduct.image_url);
-                                setImagePreview(null);
-                                setImageToDelete(selectedProduct.image_url);
-                                setFormData(prev => ({ ...prev, image: null }));
-                                toast({ title: "Image deleted" });
-                              } catch {
-                                toast({ title: "Error", description: "Failed to delete image", variant: "destructive" });
+                              setImagePreview(null);
+                              setFormData(prev => ({ ...prev, image: null }));
+                              if (isEditing && selectedProduct?.image_url && imagePreview === selectedProduct.image_url && selectedProduct.image_url.indexOf('/upload/products/') !== -1) {
+                                try { await deleteImage(selectedProduct.image_url) } catch {}
                               }
+                              toast({ title: "Image deleted" });
                             }}
                           >
                             <Trash2 className="h-5 w-5 mr-1" />
