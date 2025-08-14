@@ -1,5 +1,7 @@
+
 import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 import connection from '@/lib/mysql';
 
 export async function POST(req: NextRequest) {
@@ -19,19 +21,16 @@ export async function POST(req: NextRequest) {
     if (existing) {
       return NextResponse.json({ error: 'Phone or email already registered' }, { status: 409 });
     }
-    // Find max id and increment for new customer
-    const [maxRows] = await connection.query('SELECT MAX(id) as maxId FROM customers');
-    const maxIdRaw = (maxRows as any[])[0]?.maxId;
-    const nextId = typeof maxIdRaw === 'number' && !isNaN(maxIdRaw) ? maxIdRaw + 1 : 1;
-    // Create new customer with explicit numeric id
+    // Create new customer with UUID
+    const id = uuidv4();
     await connection.query(
       'INSERT INTO customers (id, name, email, phone, password) VALUES (?, ?, ?, ?, ?)',
-      [nextId, name, email, phone, password]
+      [id, name, email, phone, password]
     );
     // Fetch the newly created customer
     const [rows] = await connection.query(
       'SELECT * FROM customers WHERE id = ?',
-      [nextId]
+      [id]
     );
     const customer = (rows as any[])[0];
     if (customer) delete customer.password;

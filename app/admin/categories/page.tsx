@@ -33,6 +33,7 @@ export default function AdminCategoriesPage() {
     description: '',
     image: null as File | null
   })
+  const [imageDeleted, setImageDeleted] = useState(false);
   const [uploading, setUploading] = useState(false)
   const { toast } = useToast()
 
@@ -86,11 +87,13 @@ export default function AdminCategoriesPage() {
         })
         if (!uploadRes.ok) throw new Error('Image upload failed')
         const uploadJson = await uploadRes.json()
-        console.log('Upload response:', uploadJson) // Log the upload response
-        // Ensure the path is correct for public access
         imageUrl = uploadJson.path.startsWith('/upload/') ? uploadJson.path : `/upload/${uploadJson.path.replace(/^\/+/, '')}`
       } else if (isEditing && selectedCategory) {
-        imageUrl = selectedCategory.image_url
+        if (imageDeleted) {
+          imageUrl = `/placeholder.svg?height=200&width=200&text=${encodeURIComponent(formData.name)}`;
+        } else {
+          imageUrl = selectedCategory.image_url;
+        }
       } else {
         imageUrl = `/placeholder.svg?height=200&width=200&text=${encodeURIComponent(formData.name)}`
       }
@@ -142,6 +145,7 @@ export default function AdminCategoriesPage() {
       description: category.description,
       image: null
     })
+    setImageDeleted(false);
     setIsEditing(true)
     setDialogOpen(true)
   }
@@ -170,30 +174,30 @@ export default function AdminCategoriesPage() {
       description: '',
       image: null
     })
+    setImageDeleted(false);
     setSelectedCategory(null)
     setIsEditing(false)
   }
 
   const handleAddNew = () => {
-    resetForm()
-    setDialogOpen(true)
+    resetForm();
+    setDialogOpen(true);
   }
 
   const filteredCategories = categories.filter(category =>
     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     category.description.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  );
 
   if (loading) {
     return (
       <AdminLayout title="Category Management">
         <div className="text-center">Loading categories...</div>
       </AdminLayout>
-    )
+    );
   }
 
   return (
-
     <AdminLayout title="Category Management">
       <div className="space-y-6">
         {/* Header Actions */}
@@ -294,7 +298,6 @@ export default function AdminCategoriesPage() {
                   required
                 />
               </div>
-              
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -304,7 +307,6 @@ export default function AdminCategoriesPage() {
                   rows={3}
                 />
               </div>
-              
               <div>
                 <Label htmlFor="image">Category Image</Label>
                 <Input
@@ -319,7 +321,7 @@ export default function AdminCategoriesPage() {
                 {/* Image preview and image action buttons below file input */}
                 {(formData.image || (isEditing && selectedCategory?.image_url)) && (
                   <div className="flex items-center gap-4 mt-2">
-                    {(formData.image || selectedCategory?.image_url) && (
+                    {!imageDeleted && (formData.image || selectedCategory?.image_url) && (
                       <>
                         <Image
                           src={formData.image ? URL.createObjectURL(formData.image) : selectedCategory?.image_url || "/placeholder.svg"}
@@ -329,16 +331,16 @@ export default function AdminCategoriesPage() {
                           className="object-cover rounded border"
                           onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
                         />
-                        {(
-                          (formData.image) ||
-                          (selectedCategory?.image_url && !selectedCategory.image_url.startsWith('/placeholder.svg'))
-                        ) && (
+                        {((formData.image) || (selectedCategory?.image_url && !selectedCategory.image_url.startsWith('/placeholder.svg')) ) && (
                           <div className="flex flex-col gap-2">
                             <Button
                               type="button"
                               variant="destructive"
                               size="sm"
-                              onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, image: null }));
+                                setImageDeleted(true);
+                              }}
                             >
                               Delete Image
                             </Button>
@@ -346,10 +348,12 @@ export default function AdminCategoriesPage() {
                         )}
                       </>
                     )}
+                    {imageDeleted && (
+                      <span className="text-red-600">Image will be removed</span>
+                    )}
                   </div>
                 )}
               </div>
-              
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
@@ -367,5 +371,5 @@ export default function AdminCategoriesPage() {
         </Dialog>
       </div>
     </AdminLayout>
-  )
+  );
 }

@@ -119,20 +119,20 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50 px-2 sm:px-0">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-            <Shield className="h-6 w-6 text-orange-600" />
+          <div className="mx-auto mb-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-orange-100">
+            <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
           </div>
-          <CardTitle className="text-2xl font-bold text-orange-800">Admin Login</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold text-orange-800">Admin Login</CardTitle>
+          <CardDescription className="text-xs sm:text-base">
             Access the CrackersHub admin panel
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!adminExists && (
-            <Alert className="mb-6">
+            <Alert className="mb-4 sm:mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 No admin user found. Please create an admin user first.
@@ -140,8 +140,8 @@ export default function AdminLoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="username">Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -151,14 +151,14 @@ export default function AdminLoginPage() {
                   placeholder="Enter username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm sm:text-base"
                   disabled={loading}
                   required
                 />
               </div>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -168,17 +168,17 @@ export default function AdminLoginPage() {
                   placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm sm:text-base"
                   disabled={loading}
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <Button
                 type="submit"
-                className="w-full bg-orange-600 hover:bg-orange-700"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-sm sm:text-base"
                 disabled={loading || !adminExists}
               >
                 {loading ? "Signing in..." : "Sign In"}
@@ -188,7 +188,7 @@ export default function AdminLoginPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-sm sm:text-base"
                   onClick={handleCreateAdmin}
                   disabled={loading}
                 >
@@ -198,7 +198,7 @@ export default function AdminLoginPage() {
             </div>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">
             <p>Default credentials:</p>
             <p><strong>Username:</strong> admin</p>
             <p><strong>Password:</strong> admin123</p>

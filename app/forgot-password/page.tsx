@@ -103,16 +103,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50 flex items-center justify-center px-2 sm:px-0 py-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Sparkles className="h-12 w-12 text-orange-600" />
+          <div className="flex justify-center mb-2 sm:mb-4">
+            <Sparkles className="h-8 w-8 sm:h-12 sm:w-12 text-orange-600" />
           </div>
-          <CardTitle className="text-2xl font-bold text-orange-800">
+          <CardTitle className="text-xl sm:text-2xl font-bold text-orange-800">
             {step === 'phone' ? 'Reset Password' : 'Create New Password'}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-base">
             {step === 'phone' 
               ? 'Enter your phone number to reset your password'
               : 'Enter your new password'
@@ -121,14 +121,14 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent>
           {step === 'phone' ? (
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
+            <form onSubmit={handlePhoneSubmit} className="space-y-3 sm:space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
@@ -137,26 +137,27 @@ export default function ForgotPasswordPage() {
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   required
+                  className="text-sm sm:text-base"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-sm sm:text-base"
                 disabled={loading}
               >
                 {loading ? "Verifying..." : "Verify Phone"}
               </Button>
             </form>
           ) : (
-            <form onSubmit={handlePasswordReset} className="space-y-4">
+            <form onSubmit={handlePasswordReset} className="space-y-3 sm:space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
                 <div className="relative">
                   <Input
@@ -166,6 +167,7 @@ export default function ForgotPasswordPage() {
                     value={formData.newPassword}
                     onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
                     required
+                    className="text-sm sm:text-base"
                   />
                   <Button
                     type="button"
@@ -183,7 +185,7 @@ export default function ForgotPasswordPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
                 <div className="relative">
                   <Input
@@ -193,6 +195,7 @@ export default function ForgotPasswordPage() {
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     required
+                    className="text-sm sm:text-base"
                   />
                   <Button
                     type="button"
@@ -212,7 +215,7 @@ export default function ForgotPasswordPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-sm sm:text-base"
                 disabled={loading}
               >
                 {loading ? "Updating Password..." : "Update Password"}
@@ -221,7 +224,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full"
+                className="w-full text-sm sm:text-base"
                 onClick={() => setStep('phone')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -230,10 +233,10 @@ export default function ForgotPasswordPage() {
             </form>
           )}
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 sm:mt-6 text-center">
             <Link
               href="/login"
-              className="text-sm text-orange-600 hover:text-orange-700 hover:underline"
+              className="text-xs sm:text-sm text-orange-600 hover:text-orange-700 hover:underline"
             >
               Back to Login
             </Link>

@@ -441,51 +441,56 @@ export default function AdminProductsPage() {
                   />
                   {/* Preview uploaded or selected image */}
                   {imagePreview && (
-                    <div className="mt-2 flex items-center gap-3">
-                      <div className="relative">
-                        <p className="text-sm text-gray-600 mb-2">Image preview:</p>
+                    <div className="mt-2 flex items-center w-full">
+                      <div className="flex items-center">
+                        
                         <Image
                           src={imagePreview}
                           alt="Product image preview"
                           width={100}
                           height={100}
-                          className="rounded object-cover"
+                          className="rounded object-cover mr-4"
                         />
                       </div>
-                      {/* Show delete button next to image if not a placeholder */}
                       {imagePreview && !imagePreview.startsWith('/placeholder.svg') && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="text-red-600 hover:text-red-700 p-2 bg-white border border-gray-300 rounded-full shadow"
-                            title="Delete Image"
-                            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
-                            onClick={async () => {
-                              setImagePreview(null);
-                              setFormData(prev => ({ ...prev, image: null }));
-                              if (isEditing && selectedProduct?.image_url && imagePreview === selectedProduct.image_url && selectedProduct.image_url.indexOf('/upload/products/') !== -1) {
-                                try { await deleteImage(selectedProduct.image_url) } catch {}
-                              }
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          
+                          onClick={async () => {
+                            setImagePreview("/placeholder.svg");
+                            setFormData(prev => ({ ...prev, image: null }));
+                            // Update product in database to set image_url to placeholder
+                            if (isEditing && selectedProduct) {
+                              try {
+                                await fetch(`/api/products?id=${selectedProduct.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ ...selectedProduct, image_url: "/placeholder.svg" })
+                                });
+                                toast({ title: "Image deleted" });
+                                fetchProducts();
+                              } catch {}
+                            } else {
                               toast({ title: "Image deleted" });
-                            }}
-                          >
-                            <Trash2 className="h-5 w-5 mr-1" />
-                            <span className="text-xs font-medium">Delete Image</span>
-                          </Button>
-                        </div>
+                            }
+                          }}
+                        >
+                          Delete Image
+                        </Button>
                       )}
                     </div>
                   )}
                   {/* If no image preview, show placeholder */}
                   {!imagePreview && (
-                    <div className="mt-2">
+                    <div className="mt-2 flex items-center w-full">
                       <Image
                         src={"/placeholder.svg"}
                         alt="No image"
                         width={100}
                         height={100}
-                        className="rounded object-cover"
+                        className="rounded object-cover mr-4"
                       />
                     </div>
                   )}

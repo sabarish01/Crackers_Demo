@@ -7,8 +7,10 @@ import { Sparkles, Star, Zap } from 'lucide-react'
 
 const heroImages = [
   '/diwali-fireworks.png',
-  '/colorful-crackers-display.png',
-  '/placeholder-if1ox.png'
+  // '/colorful-crackers-display.png',
+  // '/placeholder-if1ox.png'
+  '/Homepage1.png',
+  '/Homepage2.jpg'
 ]
 
 export default function HeroSection() {
@@ -17,7 +19,7 @@ export default function HeroSection() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % heroImages.length)
-    }, 5000)
+    }, 2000)
     return () => clearInterval(interval)
   }, [])
 

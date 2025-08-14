@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -40,7 +41,9 @@ interface Category {
   name: string
 }
 
-export default function ProductsPage() {
+// ...existing code...
+
+function ProductsPageContent() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -237,7 +240,6 @@ export default function ProductsPage() {
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-orange-800 mb-8">Our Products</h1>
-        
         {/* Search and Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
@@ -395,4 +397,12 @@ export default function ProductsPage() {
       <Footer />
     </div>
   )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProductsPageContent />
+    </Suspense>
+  );
 }

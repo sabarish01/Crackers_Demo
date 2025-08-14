@@ -71,54 +71,54 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-orange-800 mb-4">Contact Us</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+      <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-4xl font-bold text-orange-800 mb-2 sm:mb-4">Contact Us</h1>
+          <p className="text-xs sm:text-lg text-gray-600 max-w-2xl mx-auto">
             Have questions about our crackers or need help with your order? 
             We're here to help! Get in touch with us.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
           {/* Contact Information */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Phone className="h-5 w-5" />
                   Phone
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold">+91 98765 43210</p>
-                <p className="text-sm text-gray-600">Mon-Sat, 9 AM - 7 PM</p>
+                <p className="text-base sm:text-lg font-semibold">+91 98765 43210</p>
+                <p className="text-xs sm:text-sm text-gray-600">Mon-Sat, 9 AM - 7 PM</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Mail className="h-5 w-5" />
                   Email
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold">info@crackersstore.com</p>
-                <p className="text-sm text-gray-600">We'll respond within 24 hours</p>
+                <p className="text-base sm:text-lg font-semibold">info@crackersstore.com</p>
+                <p className="text-xs sm:text-sm text-gray-600">We'll respond within 24 hours</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <MapPin className="h-5 w-5" />
                   Address
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="font-semibold">Crackers Store</p>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600">
                   123 Festival Street<br />
                   Celebration City, CC 12345<br />
                   India
@@ -128,13 +128,13 @@ export default function ContactPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Clock className="h-5 w-5" />
                   Business Hours
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1 text-sm">
+                <div className="space-y-1 text-xs sm:text-sm">
                   <div className="flex justify-between">
                     <span>Monday - Friday:</span>
                     <span>9:00 AM - 7:00 PM</span>
@@ -153,16 +153,16 @@ export default function ContactPage() {
           </div>
 
           {/* Shop Map Section */}
-          <div className="lg:col-span-2">
+          <div className="sm:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <MapPin className="h-5 w-5" />
                   Shop Location
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="w-full h-96 rounded-lg overflow-hidden">
+                <div className="w-full h-60 sm:h-96 rounded-lg overflow-hidden">
                   <iframe
                     src="https://www.google.com/maps?q=Sivakasi,+Tamil+Nadu,+India&output=embed"
                     width="100%"
@@ -177,41 +177,41 @@ export default function ContactPage() {
             </Card>
 
             {/* FAQ Section */}
-            <Card className="mt-8">
+            <Card className="mt-4 sm:mt-8">
               <CardHeader>
-                <CardTitle>Frequently Asked Questions</CardTitle>
+                <CardTitle className="text-sm sm:text-base">Frequently Asked Questions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   <div>
-                    <h4 className="font-semibold text-orange-800 mb-2">
+                    <h4 className="font-semibold text-orange-800 mb-1 sm:mb-2 text-xs sm:text-base">
                       What are your delivery areas?
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       We deliver across India. Delivery charges may vary based on location and order value.
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-orange-800 mb-2">
+                    <h4 className="font-semibold text-orange-800 mb-1 sm:mb-2 text-xs sm:text-base">
                       How long does delivery take?
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       Standard delivery takes 3-5 business days. Express delivery is available for select locations.
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-orange-800 mb-2">
+                    <h4 className="font-semibold text-orange-800 mb-1 sm:mb-2 text-xs sm:text-base">
                       Are your crackers safe and certified?
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       Yes, all our products are safety certified and comply with government regulations.
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-orange-800 mb-2">
+                    <h4 className="font-semibold text-orange-800 mb-1 sm:mb-2 text-xs sm:text-base">
                       Can I cancel or modify my order?
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       Orders can be cancelled or modified within 2 hours of placement. Contact us immediately for assistance.
                     </p>
                   </div>

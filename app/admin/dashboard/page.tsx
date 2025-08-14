@@ -38,8 +38,8 @@ export default function AdminDashboard() {
       // Fetch orders stats
       const ordersRes = await fetch('/api/orders')
       const orders = ordersRes.ok ? await ordersRes.json() : []
-      const pendingRes = await fetch('/api/orders?status=Pending')
-      const pendingOrders = pendingRes.ok ? await pendingRes.json() : []
+  // Count pending orders from all orders
+  const pendingOrders = orders.filter((order: any) => order.status === 'Pending')
       // Fetch products count
       const productsRes = await fetch('/api/products')
       const products = productsRes.ok ? await productsRes.json() : []
@@ -49,11 +49,13 @@ export default function AdminDashboard() {
       // Fetch recent orders with customer name
       const recentRes = await fetch('/api/orders?includeCustomer=true&sort=created_at_desc&limit=5')
       const recentOrders = recentRes.ok ? await recentRes.json() : []
-      // Count all orders and revenue
-      const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.final_amount || 0), 0)
+      // Count all orders and revenue (revenue only for Delivered)
+      const totalRevenue = orders
+        .filter((order: any) => order.status === 'Delivered')
+        .reduce((sum: number, order: any) => sum + (order.final_amount || 0), 0)
       setStats({
         totalOrders: orders.length,
-        pendingOrders: pendingOrders.length,
+  pendingOrders: pendingOrders.length,
         totalProducts: products.length,
         totalCustomers: customers.length,
         totalRevenue,

@@ -106,19 +106,19 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-orange-800 mb-8 flex items-center gap-2">
-          <User className="h-8 w-8" />
+      <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-orange-800 mb-6 sm:mb-8 flex items-center gap-2 justify-center sm:justify-start">
+          <User className="h-7 w-7 sm:h-8 sm:w-8" />
           My Profile
         </h1>
 
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Full Name</Label>
                   <Input
@@ -127,6 +127,7 @@ export default function ProfilePage() {
                     value={profileData.name}
                     onChange={handleChange}
                     required
+                    className="text-sm sm:text-base"
                   />
                 </div>
                 <div>
@@ -137,10 +138,11 @@ export default function ProfilePage() {
                     value={profileData.phone}
                     onChange={handleChange}
                     required
+                    className="text-sm sm:text-base"
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Input
@@ -150,9 +152,10 @@ export default function ProfilePage() {
                   value={profileData.email}
                   onChange={handleChange}
                   required
+                  className="text-sm sm:text-base"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="address">Address</Label>
                 <Textarea
@@ -162,9 +165,10 @@ export default function ProfilePage() {
                   onChange={handleChange}
                   placeholder="Enter your full address"
                   rows={3}
+                  className="text-sm sm:text-base"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="pincode">Pincode</Label>
                 <Input
@@ -173,23 +177,24 @@ export default function ProfilePage() {
                   value={profileData.pincode}
                   onChange={handleChange}
                   placeholder="Enter your pincode"
+                  className="text-sm sm:text-base"
                 />
               </div>
-              
-              <div className="flex gap-4 pt-4">
+
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-4">
                 <Button
                   onClick={handleSave}
                   disabled={loading}
-                  className="bg-orange-600 hover:bg-orange-700"
+                  className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {loading ? "Saving..." : "Save Changes"}
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   onClick={handleLogout}
-                  className="text-red-600 border-red-600 hover:bg-red-50"
+                  className="text-red-600 border-red-600 hover:bg-red-50 w-full sm:w-auto"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout

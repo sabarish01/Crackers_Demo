@@ -28,6 +28,19 @@ interface PromoCode {
 }
 
 export default function CartPage() {
+  // ...existing code...
+  // Place this useEffect after 'total' is defined
+  const handleQuantityChange = async (cartItemId: string, newQuantity: number) => {
+    try {
+      await updateQuantity(cartItemId, newQuantity);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update quantity",
+        variant: "destructive",
+      });
+    }
+  } 
   const [promoCode, setPromoCode] = useState('')
   const [availablePromoCodes, setAvailablePromoCodes] = useState<PromoCode[]>([])
   const [filteredPromoCodes, setFilteredPromoCodes] = useState<PromoCode[]>([])
@@ -67,58 +80,9 @@ export default function CartPage() {
 
   useEffect(() => {
     if (!customer) {
-      router.push('/login')
-      return
+      router.push('/login');
     }
-    // Pre-fill customer data
-    setCheckoutData(prev => ({
-      ...prev,
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address || '',
-      pincode: customer.pincode || ''
-    }))
-    fetchPromoCodes()
-  }, [customer, router])
-
-  useEffect(() => {
-    // Filter promo codes by min_order_value
-    setFilteredPromoCodes(availablePromoCodes.filter(promo => {
-      if (typeof promo.min_order_value === 'number') {
-        return total >= promo.min_order_value
-      }
-      return total >= Number(promo.min_order_value || 0)
-    }))
-  }, [availablePromoCodes, total])
-
-  const fetchPromoCodes = async () => {
-    try {
-      const res = await fetch('/api/promocodes')
-      if (!res.ok) throw new Error('Failed to fetch promo codes')
-      if (!res.ok) {
-        throw new Error('Failed to load promocodes')
-      }
-      const data = await res.json()
-  setAvailablePromoCodes(data as PromoCode[])
-    } catch (error) {
-      console.error('Error fetching promo codes:', error)
-    }
-  }
-
-  const handleQuantityChange = async (cartItemId: string, newQuantity: number) => {
-    if (newQuantity < 1) return
-    
-    try {
-      await updateQuantity(cartItemId, newQuantity)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update quantity",
-        variant: "destructive",
-      })
-    }
-  }
+  }, [customer, router]);
 
   const handleRemoveItem = async (cartItemId: string) => {
     try {
@@ -185,6 +149,35 @@ export default function CartPage() {
   }
 
   const subtotal = total
+  // Fetch and filter promo codes
+  useEffect(() => {
+    async function fetchPromoCodes() {
+      try {
+        const res = await fetch('/api/promocodes');
+        if (!res.ok) return;
+        const codes = await res.json();
+        setAvailablePromoCodes(codes);
+        // Find the single best promo code (highest discount) that is active, not expired, and min_order_value <= total
+        const today = new Date();
+        const validPromos = codes.filter((promo: PromoCode) => {
+          const expiry = new Date(promo.expiry_date);
+          const minValue = typeof promo.min_order_value === 'number' ? promo.min_order_value : Number(promo.min_order_value || 0);
+          return promo.is_active && expiry >= today && total >= minValue;
+        });
+        // Sort by discount_percentage descending, then by min_order_value ascending (if tie)
+        validPromos.sort((a: PromoCode, b: PromoCode) => {
+          if (b.discount_percentage !== a.discount_percentage) {
+            return b.discount_percentage - a.discount_percentage;
+          }
+          return (Number(a.min_order_value) || 0) - (Number(b.min_order_value) || 0);
+        });
+        setFilteredPromoCodes(validPromos.length > 0 ? [validPromos[0]] : []);
+      } catch (e) {
+        // ignore
+      }
+    }
+    fetchPromoCodes();
+  }, [total]);
   const discountAmount = appliedPromo ? (subtotal * appliedPromo.discount_percentage) / 100 : 0
   const finalTotal = subtotal - discountAmount
 

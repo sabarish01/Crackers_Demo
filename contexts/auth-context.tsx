@@ -42,54 +42,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [admin, setAdmin] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const DEBUG_AUTH = true;
 
   useEffect(() => {
     // Load auth state from localStorage
-    const savedCustomer = localStorage.getItem('customer')
-    const savedAdmin = localStorage.getItem('admin')
-    
+    if (DEBUG_AUTH) {
+      console.log('[AuthProvider] useEffect: Checking localStorage on mount');
+      console.log('[AuthProvider] localStorage.customer:', localStorage.getItem('customer'));
+      console.log('[AuthProvider] localStorage.admin:', localStorage.getItem('admin'));
+    }
+    const savedCustomer = localStorage.getItem('customer');
+    const savedAdmin = localStorage.getItem('admin');
     if (savedCustomer) {
       try {
-        setCustomer(JSON.parse(savedCustomer))
+        setCustomer(JSON.parse(savedCustomer));
+        if (DEBUG_AUTH) console.log('[AuthProvider] setCustomer called', savedCustomer);
       } catch (error) {
-        console.error('Error parsing saved customer:', error)
-        localStorage.removeItem('customer')
+        console.error('Error parsing saved customer:', error);
+        localStorage.removeItem('customer');
       }
     }
-    
     if (savedAdmin) {
       try {
-        setAdmin(JSON.parse(savedAdmin))
+        setAdmin(JSON.parse(savedAdmin));
+        if (DEBUG_AUTH) console.log('[AuthProvider] setAdmin called', savedAdmin);
       } catch (error) {
-        console.error('Error parsing saved admin:', error)
-        localStorage.removeItem('admin')
+        console.error('Error parsing saved admin:', error);
+        localStorage.removeItem('admin');
       }
     }
-    
-    setLoading(false)
-  }, [])
+    setLoading(false);
+  }, []);
 
   const login = (user: Customer | AdminUser) => {
     if ('phone' in user) {
       // It's a customer
-      setCustomer(user as Customer)
-      setAdmin(null)
-      localStorage.setItem('customer', JSON.stringify(user))
-      localStorage.removeItem('admin')
+      setCustomer(user as Customer);
+      setAdmin(null);
+      localStorage.setItem('customer', JSON.stringify(user));
+      localStorage.removeItem('admin');
+      if (DEBUG_AUTH) console.log('[AuthProvider] login: customer set', user);
     } else {
       // It's an admin
-      setAdmin(user as AdminUser)
-      setCustomer(null)
-      localStorage.setItem('admin', JSON.stringify(user))
-      localStorage.removeItem('customer')
+      setAdmin(user as AdminUser);
+      setCustomer(null);
+      localStorage.setItem('admin', JSON.stringify(user));
+      localStorage.removeItem('customer');
+      if (DEBUG_AUTH) console.log('[AuthProvider] login: admin set', user);
     }
   }
 
   const logout = () => {
-    setCustomer(null)
-    setAdmin(null)
-    localStorage.removeItem('customer')
-    localStorage.removeItem('admin')
+  setCustomer(null);
+  setAdmin(null);
+  localStorage.removeItem('customer');
+  localStorage.removeItem('admin');
+  if (DEBUG_AUTH) console.log('[AuthProvider] logout: customer and admin removed');
   }
 
   return (

@@ -13,37 +13,66 @@ interface OrderItem {
 }
 
 interface Order {
+    id: string;
+    total_amount: number;
+    discount_amount: number;
+    final_amount: number;
+    status: string;
+    delivery_address: string;
+    delivery_pincode: string;
+    payment_screenshot_url: string | null;
+    bank_reference_number: string | null;
+    courier_partner: string | null;
+    tracking_number: string | null;
+    courier_bill_url: string | null;
+    created_at: string;
+    promocode_id: string | null;
     delivery_name?: string;
     delivery_email?: string;
     delivery_phone?: string;
-  id: string
-  total_amount: number
-  discount_amount?: number
-  final_amount?: number
-  status: string
-  delivery_address?: string
-  delivery_pincode?: string
-  created_at: string
-  courier_partner?: string | null
-  tracking_number?: string | null
-  customers?: {
-    name: string
-    email: string
-    phone: string
-  }
-  order_items: OrderItem[]
+    promocodes?: {
+        code: string;
+        discount_percentage: number;
+    };
+    order_items: OrderItem[];
+    items_modified?: boolean;
 }
 
 export const generateOrderPDF = (order: Order) => {
-  // Create a new window for the PDF content
-  const printWindow = window.open('', '_blank')
+    // Create a new window for the PDF content
+    const printWindow = window.open('', '_blank')
 
-  if (!printWindow) {
-    alert('Please allow popups to generate PDF')
-    return
-  }
+    if (!printWindow) {
+        alert('Please allow popups to generate PDF')
+        return
+    }
 
-  const htmlContent = `
+    // Payment details section (with image) - Card styled
+    let paymentDetailsSection = '';
+    if (order.payment_screenshot_url || order.bank_reference_number) {
+        paymentDetailsSection = `
+            <div class="card">
+              <div class="section-title">Payment Details</div>
+              <div class="info-row"><span class="info-label">Reference:</span> ${order.bank_reference_number || 'N/A'}</div>
+              ${order.payment_screenshot_url ? `<div class="info-row"><img src="${order.payment_screenshot_url}" alt="Payment Screenshot" class="img" /></div>` : ''}
+            </div>
+        `;
+    }
+
+    // Add shipping details section to PDF
+    let shippingDetailsSection = '';
+    if (order.courier_partner || order.tracking_number || order.courier_bill_url) {
+        shippingDetailsSection = `
+            <div class="card">
+              <div class="section-title">Shipping Details</div>
+              ${order.courier_partner ? `<div class="info-row"><span class="info-label">Courier:</span> ${order.courier_partner}</div>` : ''}
+              ${order.tracking_number ? `<div class="info-row"><span class="info-label">Tracking Number:</span> ${order.tracking_number}</div>` : ''}
+              ${order.courier_bill_url ? `<div class="info-row"><img src="${order.courier_bill_url}" alt="Courier Bill" class="img small" /></div>` : ''}
+            </div>
+        `;
+    }
+
+    const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -76,24 +105,18 @@ export const generateOrderPDF = (order: Order) => {
                 display: flex;
                 justify-content: space-between;
                 margin-bottom: 30px;
+                gap: 20px;
+            }
+            .card {
                 background: #f8f9fa;
-                padding: 20px;
+                padding: 16px;
                 border-radius: 8px;
+                border: 1px solid #e5e7eb;
+                margin-bottom: 16px;
             }
-            .order-details, .customer-details {
-                flex: 1;
-            }
-            .order-details {
-                margin-right: 30px;
-            }
-            .section-title {
-                font-size: 18px;
-                font-weight: bold;
-                color: #ea580c;
-                margin-bottom: 10px;
-                border-bottom: 1px solid #ea580c;
-                padding-bottom: 5px;
-            }
+            .img { max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd; margin-top: 8px; }
+            .img.small { max-width: 120px; max-height: 120px; }
+            .section-title { font-weight: 700; color: #ea580c; margin-bottom: 10px; border-bottom: 1px solid #ea580c; padding-bottom: 5px; }
             .info-row {
                 margin-bottom: 8px;
             }
@@ -155,13 +178,6 @@ export const generateOrderPDF = (order: Order) => {
                 font-weight: bold;
                 color: #ea580c;
             }
-            .tracking-info {
-                margin-top: 30px;
-                padding: 20px;
-                background: #e0f2fe;
-                border-radius: 8px;
-                border-left: 4px solid #0284c7;
-            }
             .footer {
                 margin-top: 50px;
                 text-align: center;
@@ -183,7 +199,7 @@ export const generateOrderPDF = (order: Order) => {
         </div>
 
         <div class="order-info">
-            <div class="order-details">
+            <div class="order-details card">
                 <div class="section-title">Order Information</div>
                 <div class="info-row">
                     <span class="info-label">Order ID:</span>
@@ -205,7 +221,7 @@ export const generateOrderPDF = (order: Order) => {
                 ` : ''}
             </div>
             
-            <div class="customer-details">
+            <div class="customer-details card">
                 <div class="section-title">Delivery Information</div>
                 <div class="info-row">
                     <span class="info-label">Name:</span>
@@ -230,8 +246,9 @@ export const generateOrderPDF = (order: Order) => {
             </div>
         </div>
 
-        <div class="section-title">Order Items</div>
-        <table class="items-table">
+                <div class="card">
+                    <div class="section-title">Order Items</div>
+                    <table class="items-table">
             <thead>
                 <tr>
                     <th>Product</th>
@@ -250,41 +267,29 @@ export const generateOrderPDF = (order: Order) => {
                     </tr>
                 `).join('')}
             </tbody>
-        </table>
+                    </table>
+                </div>
 
-        <div class="summary-section">
-            <div class="section-title">Order Summary</div>
+                <div class="summary-section card">
+                    <div class="section-title">Order Summary</div>
             <div class="summary-row">
                 <span>Subtotal:</span>
                 <span>${formatCurrency(order.total_amount)}</span>
             </div>
-            ${order.discount_amount && order.discount_amount > 0 ? `
+            ${order.discount_amount > 0 ? `
             <div class="summary-row" style="color: #059669;">
                 <span>Discount:</span>
                 <span>-${formatCurrency(order.discount_amount)}</span>
             </div>
             ` : ''}
             <div class="summary-row summary-total">
-                <span>Total Amount:</span>
-                <span>${formatCurrency(order.final_amount || order.total_amount)}</span>
+                        <span>Total Amount:</span>
+                <span>${formatCurrency(order.final_amount)}</span>
             </div>
         </div>
 
-        ${order.courier_partner ? `
-        <div class="tracking-info">
-            <div class="section-title">Shipping Information</div>
-            <div class="info-row">
-                <span class="info-label">Courier Partner:</span>
-                ${order.courier_partner}
-            </div>
-            ${order.tracking_number ? `
-            <div class="info-row">
-                <span class="info-label">Tracking Number:</span>
-                ${order.tracking_number}
-            </div>
-            ` : ''}
-        </div>
-        ` : ''}
+    ${paymentDetailsSection}
+    ${shippingDetailsSection}
 
         <div class="footer">
             <p><strong>CrackersHub</strong> - Your trusted partner for premium quality crackers and fireworks</p>

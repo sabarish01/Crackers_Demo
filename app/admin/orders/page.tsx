@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { generateOrderPDF } from '@/lib/pdf-export'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -37,8 +38,12 @@ interface Order {
   total_amount: number
   discount_amount: number
   final_amount: number
+  promo_code?: string | null
   delivery_address: string
   delivery_pincode: string
+  delivery_name?: string | null
+  delivery_email?: string | null
+  delivery_phone?: string | null
   status: string
   created_at: string
   customers: {
@@ -49,6 +54,9 @@ interface Order {
   order_items: OrderItem[]
   payment_screenshot_url?: string | null
   bank_reference_number?: string | null
+  courier_partner?: string | null
+  tracking_number?: string | null
+  courier_bill_url?: string | null
 }
 
 interface Product {
@@ -56,6 +64,14 @@ interface Product {
   name: string
   price: number
   stock_quantity: number
+}
+
+interface Promo {
+  code: string
+  discount_percentage: number
+  min_order_value: number
+  is_active?: number
+  expiry_date?: string
 }
 
 export default function AdminOrdersPage() {
@@ -66,6 +82,8 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [editingItems, setEditingItems] = useState<OrderItem[]>([])
+  const [promos, setPromos] = useState<Promo[]>([])
+  const [selectedPromoCode, setSelectedPromoCode] = useState<string>('')
   const [newItem, setNewItem] = useState({
     product_id: '',
     quantity: 1
@@ -75,11 +93,13 @@ export default function AdminOrdersPage() {
   const [trackingNumber, setTrackingNumber] = useState('')
   const [courierBillFile, setCourierBillFile] = useState<File | null>(null)
   const [courierBillPreview, setCourierBillPreview] = useState<string | null>(null)
+  const [courierBillRemoved, setCourierBillRemoved] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
     fetchOrders()
     fetchProducts()
+  fetchPromos()
   }, [])
 
   const fetchOrders = async () => {
@@ -113,6 +133,15 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const fetchPromos = async () => {
+    try {
+      const res = await fetch('/api/promocodes')
+      if (!res.ok) return
+      const list = await res.json()
+      setPromos(list || [])
+    } catch {}
+  }
+
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
       const res = await fetch('/api/orders', {
@@ -138,14 +167,15 @@ export default function AdminOrdersPage() {
   }
 
   const handleEditOrder = (order: Order) => {
-    setSelectedOrder(order)
-    setEditingItems([...order.order_items])
-    setNewItem({ product_id: '', quantity: 1 })
-    // Reset and prefill track details if available (backend integration needed)
-    setCourierPartner('')
-    setTrackingNumber('')
-    setCourierBillFile(null)
-    setCourierBillPreview(null)
+  setSelectedOrder(order)
+  setEditingItems([...order.order_items])
+  setSelectedPromoCode(order.promo_code || '')
+  setNewItem({ product_id: '', quantity: 1 })
+  // Prefill track details if available
+  setCourierPartner(order.courier_partner || '')
+  setTrackingNumber(order.tracking_number || '')
+  setCourierBillFile(null)
+  setCourierBillPreview(order.courier_bill_url || null)
   }
 
   const updateItemQuantity = (itemId: string, newQuantity: number) => {
@@ -188,10 +218,10 @@ export default function AdminOrdersPage() {
   }
 
   const saveOrderChanges = async () => {
-    if (!selectedOrder) return
+    if (!selectedOrder) return;
 
     try {
-      let courierBillImageUrl = ''
+      let courierBillImageUrl = '';
       // Upload courier bill image if present
       if (courierBillFile) {
         const fd = new FormData();
@@ -204,6 +234,10 @@ export default function AdminOrdersPage() {
         if (!uploadRes.ok) throw new Error('Failed to upload courier bill image');
         const data = await uploadRes.json();
         courierBillImageUrl = data.path || data.imageUrl;
+      } else if (courierBillRemoved) {
+        courierBillImageUrl = '';
+      } else {
+        courierBillImageUrl = selectedOrder.courier_bill_url || '';
       }
 
       // Determine if any item is new or modified
@@ -223,118 +257,33 @@ export default function AdminOrdersPage() {
             isNew: item.isNew,
             isModified: item.isModified
           })),
-          discount_amount: selectedOrder.discount_amount,
+          promo_code: selectedPromoCode || null,
           courier_partner: courierPartner,
           tracking_number: trackingNumber,
-          courier_bill_image: courierBillImageUrl,
+          courier_bill_image: courierBillImageUrl, // <-- changed key here
           items_modified: itemsModified
         })
-      })
-      if (!response.ok) throw new Error('Failed to update order')
+      });
+      if (!response.ok) throw new Error('Failed to update order');
       toast({
         title: "Success",
         description: "Order updated successfully",
-      })
-      fetchOrders()
-      setSelectedOrder(null)
+      });
+      fetchOrders();
+      setSelectedOrder(null);
+      setCourierBillRemoved(false);
+      // Redirect to order list after save
+      window.location.href = '/admin/orders';
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update order",
         variant: "destructive",
-      })
+      });
     }
   }
 
-  const exportOrderPDF = (order: Order) => {
-    const orderContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #ea580c; margin-bottom: 10px;">CrackersHub</h1>
-          <h2 style="color: #333; margin-bottom: 20px;">Order Invoice</h2>
-          <p style="color: #666;">Order #${order.id.slice(-8)} - ${new Date(order.created_at).toLocaleDateString()}</p>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
-          <div>
-            <h3 style="color: #333; margin-bottom: 15px;">Customer Details</h3>
-            <p><strong>Name:</strong> ${order.customers.name}</p>
-            <p><strong>Email:</strong> ${order.customers.email}</p>
-            <p><strong>Phone:</strong> ${order.customers.phone}</p>
-            <p><strong>Address:</strong> ${order.delivery_address}</p>
-            <p><strong>Pincode:</strong> ${order.delivery_pincode}</p>
-          </div>
-          <div>
-            <h3 style="color: #333; margin-bottom: 15px;">Order Details</h3>
-            <p><strong>Status:</strong> ${order.status}</p>
-            <p><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
-            <p><strong>Total Amount:</strong> ${formatCurrency(order.final_amount)}</p>
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #333; margin-bottom: 15px;">Order Items</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #f8f9fa;">
-                <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Product</th>
-                <th style="padding: 12px; text-align: center; border: 1px solid #dee2e6;">Quantity</th>
-                <th style="padding: 12px; text-align: right; border: 1px solid #dee2e6;">Price</th>
-                <th style="padding: 12px; text-align: right; border: 1px solid #dee2e6;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.order_items.map(item => `
-                <tr style="${item.isModified ? 'background: #fff3cd;' : item.isNew ? 'background: #d1e7dd;' : ''}">
-                  <td style="padding: 12px; border: 1px solid #dee2e6;">
-                    ${item.products.name}
-                    ${item.isModified ? '<span style="color: #856404; font-size: 12px;"> (Modified)</span>' : ''}
-                    ${item.isNew ? '<span style="color: #0f5132; font-size: 12px;"> (New Item)</span>' : ''}
-                  </td>
-                  <td style="padding: 12px; text-align: center; border: 1px solid #dee2e6;">${item.quantity}</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #dee2e6;">${formatCurrency(item.price)}</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #dee2e6;">${formatCurrency(item.price * item.quantity)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-        
-        <div style="text-align: right; margin-top: 20px;">
-          <p style="font-size: 18px; font-weight: bold; color: #ea580c;">
-            Total: ${formatCurrency(order.final_amount)}
-          </p>
-        </div>
-      </div>
-    `
-
-    const printWindow = window.open('', '_blank')
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Order Invoice - ${order.id.slice(-8)}</title>
-            <style>
-              body { margin: 0; padding: 20px; }
-              @media print {
-                body { margin: 0; }
-              }
-            </style>
-          </head>
-          <body>
-            ${orderContent}
-            <script>
-              window.onload = function() {
-                window.print();
-              }
-            </script>
-          </body>
-        </html>
-      `)
-      printWindow.document.close()
-    }
-  }
+  // Removed legacy exportOrderPDF; using shared generator
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -435,10 +384,7 @@ export default function AdminOrdersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(
-                          order.order_items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-                          - (order.discount_amount || 0)
-                        )}
+                        {formatCurrency(order.final_amount)}
                       </TableCell>
                       <TableCell>
                         <Select
@@ -458,8 +404,9 @@ export default function AdminOrdersPage() {
                           </SelectContent>
                         </Select>
                         {order.status === 'Accepted' && order.payment_screenshot_url && (
-                          <div className="mt-2">
-                            <Badge className="bg-blue-600 text-white">Payment Uploaded</Badge>
+                          <div className="mt-2 flex flex-col gap-1">
+                            <Badge className="bg-blue-600 text-white px-2 py-1 text-xs w-fit">Batch Payment Uploaded</Badge>
+                            <span className="text-xs text-gray-600">Verify the payment screenshot and update status to <b>Paid</b> if valid.</span>
                           </div>
                         )}
                       </TableCell>
@@ -483,13 +430,14 @@ export default function AdminOrdersPage() {
                                 <DialogTitle>Edit Order #{order.id.slice(-8)}</DialogTitle>
                               </DialogHeader>
                                 <div className="space-y-6">
-                                  {/* Order Items and Payment Summary (combined section) */}
-                                  <section>
-                                    <div className="space-y-6">
-                                      {/* Items Details */}
-                                      <div>
-                                        <h4 className="font-semibold mb-3">Items Details</h4>
-                                        <div className="bg-gray-50 border rounded-lg p-4 mb-4">
+                                  {/* 1) Items Details (Card) */}
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle>Items Details</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="space-y-4">
+                                        <div>
                                           <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs font-semibold text-gray-600">
                                             <div className="col-span-6">Product</div>
                                             <div className="col-span-3 text-center">Quantity</div>
@@ -507,32 +455,32 @@ export default function AdminOrdersPage() {
                                                     <Badge className="bg-green-600 text-white">New</Badge>
                                                   ) : null}
                                                 </div>
-                                                <div className="col-span-3 flex items-center justify-center gap-2">
-                                                  <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
-                                                    disabled={item.quantity <= 1 || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
-                                                  >
-                                                    <Minus className="h-4 w-4" />
-                                                  </Button>
-                                                  <span className="w-8 text-center font-medium">{item.quantity}</span>
-                                                  <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
-                                                    disabled={item.quantity >= item.products.stock_quantity || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
-                                                  >
-                                                    <Plus className="h-4 w-4" />
-                                                  </Button>
-                                                </div>
+                                                  <div className="col-span-3 flex items-center justify-center">
+                                                    <Button
+                                                      variant="outline"
+                                                      size="icon"
+                                                      onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                                                      disabled={item.quantity <= 1 || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered' || selectedOrder?.status === 'Cancelled'}
+                                                    >
+                                                      <Minus className="h-4 w-4" />
+                                                    </Button>
+                                                    <span className="w-8 text-center font-medium flex items-center justify-center">{item.quantity}</span>
+                                                    <Button
+                                                      variant="outline"
+                                                      size="icon"
+                                                      onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
+                                                      disabled={item.quantity >= item.products.stock_quantity || selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered' || selectedOrder?.status === 'Cancelled'}
+                                                    >
+                                                      <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                  </div>
                                                 <div className="col-span-2 flex justify-end">
                                                   <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => removeItem(item.id)}
                                                     className="text-red-600 hover:text-red-700"
-                                                    disabled={selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered'}
+                                                    disabled={selectedOrder?.status === 'Shipped' || selectedOrder?.status === 'Delivered' || selectedOrder?.status === 'Cancelled'}
                                                   >
                                                     <Trash2 className="h-4 w-4" />
                                                   </Button>
@@ -541,47 +489,71 @@ export default function AdminOrdersPage() {
                                               </div>
                                             ))}
                                           </div>
-                                          {/* Discount details row removed; now only in Order Summary */}
                                         </div>
-                                      </div>
-
-                                      {/* Order Summary */}
-                                      <div>
-                                        <h4 className="font-semibold mb-3">Order Summary</h4>
+                                        {/* Promo Code Selector */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          {selectedOrder?.status !== 'Shipped' && selectedOrder?.status !== 'Delivered' && selectedOrder?.status !== 'Cancelled' && (
+                                            <div>
+                                              <Label>Promo Code</Label>
+                                              <Select value={selectedPromoCode || 'NONE'} onValueChange={(val) => setSelectedPromoCode(val === 'NONE' ? '' : val)}>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder="Select promo (optional)" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="NONE">No Promo</SelectItem>
+                                                  {promos.map(p => (
+                                                    <SelectItem key={p.code} value={p.code}>{p.code} - {p.discount_percentage}% (Min {formatCurrency(Number(p.min_order_value || 0))})</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {/* Inline Order Summary (DB values) */}
                                         <div className="text-sm space-y-2">
                                           {(() => {
-                                            const subtotal = editingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                                            const discount = selectedOrder && selectedOrder.discount_amount ? selectedOrder.discount_amount : 0;
-                                            const total = subtotal - discount;
+                                            const subtotal = editingItems.reduce((sum, it) => sum + (it.price * it.quantity), 0)
+                                            const promo = promos.find(p => p.code === selectedPromoCode)
+                                            const eligible = promo ? subtotal >= Number(promo.min_order_value || 0) : false
+                                            const discount = promo && eligible ? Math.floor((subtotal * Number(promo.discount_percentage || 0)) / 100) : 0
+                                            const total = Math.max(subtotal - discount, 0)
                                             return (
                                               <>
                                                 <div className="flex justify-between">
                                                   <span>Subtotal:</span>
                                                   <span>{formatCurrency(subtotal)}</span>
                                                 </div>
-                                                {discount > 0 && (
+                                                {discount > 0 ? (
                                                   <div className="flex justify-between text-green-600">
-                                                    <span>Discount:</span>
+                                                    <span>Discount ({promo?.code}):</span>
                                                     <span>-{formatCurrency(discount)}</span>
                                                   </div>
-                                                )}
+                                                ) : promo && !eligible ? (
+                                                  <div className="flex justify-between text-amber-600">
+                                                    <span>Discount ({promo.code}):</span>
+                                                    <span>Not eligible</span>
+                                                  </div>
+                                                ) : null}
                                                 <div className="flex justify-between font-semibold border-t pt-2">
                                                   <span>Total:</span>
                                                   <span>{formatCurrency(total)}</span>
                                                 </div>
                                               </>
-                                            );
+                                            )
                                           })()}
                                         </div>
                                       </div>
-                                    </div>
-                                  </section>
+                                    </CardContent>
+                                  </Card>
 
-                                  {/* Add New Item (only before Shipped) */}
-                                  {selectedOrder?.status !== 'Shipped' && selectedOrder?.status !== 'Delivered' && (
-                                    <div>
-                                      <h4 className="font-semibold mb-4">Add New Item</h4>
-                                      <div className="flex gap-4 items-end">
+                                  {/* 2) Add New Item (Card, only before Shipped) */}
+                                  {selectedOrder?.status !== 'Shipped' && selectedOrder?.status !== 'Delivered' && selectedOrder?.status !== 'Cancelled' && (
+                                      <Card>
+                                      <CardHeader>
+                                        <CardTitle>Add New Item</CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="flex gap-4 items-end">
                                         <div className="flex-1">
                                           <Label htmlFor="product">Product</Label>
                                           <Select
@@ -600,43 +572,94 @@ export default function AdminOrdersPage() {
                                             </SelectContent>
                                           </Select>
                                         </div>
-                                        <div>
-                                          <Label htmlFor="quantity">Quantity</Label>
-                                          <Input
-                                            id="quantity"
-                                            type="number"
-                                            min="1"
-                                            value={newItem.quantity}
-                                            onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))
-                                            }
-                                            className="w-20"
-                                          />
+                                        <div className="col-span-3 text-center">
+                                          <Label>Quantity</Label>
+                                          
+                                          <div className="flex items-center gap-2">
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() => setNewItem(prev => ({ ...prev, quantity: Math.max(1, (prev.quantity || 1) - 1) }))}
+                                                disabled={newItem.quantity <= 1}
+                                              >
+                                                <Minus className="h-4 w-4" />
+                                              </Button>
+                                              <span className="w-10 text-center font-medium flex items-center justify-center" style={{ marginLeft: 'auto', marginRight: 'auto' }}>{newItem.quantity}</span>
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() => {
+                                                  const selected = products.find(p => p.id === newItem.product_id);
+                                                  const maxQty = selected?.stock_quantity ?? Infinity;
+                                                  setNewItem(prev => ({ ...prev, quantity: Math.min((prev.quantity || 1) + 1, maxQty) }))
+                                                }}
+                                                disabled={(() => {
+                                                  const selected = products.find(p => p.id === newItem.product_id);
+                                                  return selected ? newItem.quantity >= selected.stock_quantity : false;
+                                                })()}
+                                              >
+                                                <Plus className="h-4 w-4" />
+                                              </Button>
+                                          </div>
                                         </div>
                                         <Button onClick={addNewItem} disabled={!newItem.product_id}>
                                           <Plus className="h-4 w-4 mr-2" />
                                           Add
                                         </Button>
-                                      </div>
-                                    </div>
-                                  )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
 
-                                  {/* Delivery Details (admin only) */}
-                                  <div className="border-t pt-4">
-                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                      <span role="img" aria-label="delivery">🚚</span> Delivery Details
-                                    </h4>
-                                    <div className="bg-gray-50 border rounded-lg p-4 mb-4">
+                                    )}
+
+                                  {/* 3) Payment Details (Card) */}
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle>Payment Details</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="mb-2">
+                                        <span className="font-medium">Reference Number:</span>
+                                        <span className="ml-2">{selectedOrder?.bank_reference_number || '-'}</span>
+                                      </div>
+                                      <div className="mb-2">
+                                        <span className="font-medium">Screenshot:</span>
+                                        {selectedOrder?.payment_screenshot_url ? (
+                                          <a href={selectedOrder.payment_screenshot_url} target="_blank" rel="noopener noreferrer">
+                                            <Image
+                                              src={selectedOrder.payment_screenshot_url}
+                                              alt="Payment Screenshot"
+                                              width={160}
+                                              height={160}
+                                              className="rounded border object-cover mt-2"
+                                            />
+                                          </a>
+                                        ) : (
+                                          <span className="ml-2">-</span>
+                                        )}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  {/* 4) Delivery Information (Card) */}
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle>Delivery Information</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
                                       <div className="mb-2">
                                         <span className="font-medium">Name:</span>
-                                        <span className="ml-2">{selectedOrder?.customers?.name || '-'}</span>
+                                        <span className="ml-2">{selectedOrder?.delivery_name || '-'}</span>
                                       </div>
                                       <div className="mb-2">
                                         <span className="font-medium">Email:</span>
-                                        <span className="ml-2">{selectedOrder?.customers?.email || '-'}</span>
+                                        <span className="ml-2">{selectedOrder?.delivery_email || '-'}</span>
                                       </div>
                                       <div className="mb-2">
                                         <span className="font-medium">Phone:</span>
-                                        <span className="ml-2">{selectedOrder?.customers?.phone || '-'}</span>
+                                        <span className="ml-2">{selectedOrder?.delivery_phone || '-'}</span>
                                       </div>
                                       <div className="mb-2">
                                         <span className="font-medium">Address:</span>
@@ -646,85 +669,108 @@ export default function AdminOrdersPage() {
                                         <span className="font-medium">Pincode:</span>
                                         <span className="ml-2">{selectedOrder?.delivery_pincode || '-'}</span>
                                       </div>
-                                    </div>
-                                  </div>
+                                    </CardContent>
+                                  </Card>
 
-                                
-
-                                  {/* Track Details (courier info, bill upload) */}
-                                  <div className="border-t pt-4">
-                                    <h4 className="font-semibold mb-2">Track Details</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <Label>Courier Partner Name</Label>
-                                        <Input
-                                          placeholder="Courier Partner Name"
-                                          value={courierPartner}
-                                          onChange={e => setCourierPartner(e.target.value)}
-                                          disabled={selectedOrder?.status === 'Delivered'}
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label>Tracking Number</Label>
-                                        <Input
-                                          placeholder="Tracking Number"
-                                          value={trackingNumber}
-                                          onChange={e => setTrackingNumber(e.target.value)}
-                                          disabled={selectedOrder?.status === 'Delivered'}
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label>Courier Bill Image</Label>
-                                        <Input
-                                          type="file"
-                                          accept="image/*"
-                                          disabled={selectedOrder?.status === 'Delivered'}
-                                          onChange={e => {
-                                            const file = e.target.files?.[0] || null;
-                                            setCourierBillFile(file);
-                                            if (file) {
-                                              setCourierBillPreview(URL.createObjectURL(file));
-                                            } else {
-                                              setCourierBillPreview(null);
-                                            }
-                                          }}
-                                        />
-                                        {courierBillPreview && (
-                                          <div className="mt-2">
-                                            <Image
-                                              src={courierBillPreview}
-                                              alt="Courier Bill Preview"
-                                              width={120}
-                                              height={120}
-                                              className="rounded object-cover border"
-                                            />
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              className="text-red-600 hover:text-red-700 mt-1"
-                                              onClick={() => {
-                                                setCourierBillFile(null);
-                                                setCourierBillPreview(null);
-                                              }}
-                                            >
-                                              Remove
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {/* Only allow upload/edit/delete before Delivered, and only after Mark as Paid (add logic in next step) */}
-                                  </div>
-
-                                 
+                                  {/* 5) Shipping Details (Card) */}
+                                  {selectedOrder && (selectedOrder.status === 'Paid' || selectedOrder.status === 'Shipped') && (
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle>Shipping Details</CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="mb-2">
+                                          <Label>Courier Partner</Label>
+                                          <Input
+                                            placeholder="Courier Partner Name"
+                                            value={courierPartner}
+                                            onChange={e => setCourierPartner(e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="mb-2">
+                                          <Label>Tracking Number</Label>
+                                          <Input
+                                            placeholder="Tracking Number"
+                                            value={trackingNumber}
+                                            onChange={e => setTrackingNumber(e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="mb-2">
+                                          <Label>Courier Bill Image</Label>
+                                          <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={e => {
+                                              const file = e.target.files?.[0] || null;
+                                              setCourierBillFile(file);
+                                              if (file) {
+                                                setCourierBillPreview(URL.createObjectURL(file));
+                                              } else {
+                                                setCourierBillPreview(selectedOrder?.courier_bill_url || null);
+                                              }
+                                            }}
+                                          />
+                                          {(courierBillPreview || selectedOrder?.courier_bill_url) && (
+                                            <div className="mt-2">
+                                              <Image
+                                                src={(courierBillPreview || selectedOrder?.courier_bill_url) ?? "/placeholder.svg"}
+                                                alt="Courier Bill Preview"
+                                                width={120}
+                                                height={120}
+                                                className="rounded object-cover border"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
+                                  {/* Show view-only shipping card for Delivered status */}
+                                  {selectedOrder && selectedOrder.status === 'Delivered' && (
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle>Shipping Details</CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="mb-2">
+                                          <span className="font-medium">Courier Partner:</span>
+                                          <span className="ml-2">{selectedOrder.courier_partner || '-'}</span>
+                                        </div>
+                                        <div className="mb-2">
+                                          <span className="font-medium">Tracking Number:</span>
+                                          <span className="ml-2">{selectedOrder.tracking_number || '-'}</span>
+                                        </div>
+                                        <div className="mb-2">
+                                          <span className="font-medium">Courier Bill:</span>
+                                          {selectedOrder.courier_bill_url ? (
+                                            <a href={selectedOrder.courier_bill_url} target="_blank" rel="noopener noreferrer">
+                                              <Image
+                                                src={selectedOrder.courier_bill_url}
+                                                alt="Courier Bill"
+                                                width={120}
+                                                height={120}
+                                                className="rounded object-cover border mt-2"
+                                              />
+                                            </a>
+                                          ) : (
+                                            <span className="ml-2">-</span>
+                                          )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
 
                                   <div className="flex gap-2 pt-4">
-                                    <Button onClick={saveOrderChanges} className="bg-orange-600 hover:bg-orange-700">
-                                      Save Changes
-                                    </Button>
-                                    <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-                                      Cancel
-                                    </Button>
+                                    {selectedOrder?.status !== 'Delivered' && selectedOrder?.status !== 'Cancelled' && (
+                                      <Button onClick={saveOrderChanges} className="bg-orange-600 hover:bg-orange-700">
+                                        Save Changes
+                                      </Button>
+                                    )}
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" type="button" onClick={() => setSelectedOrder(null)}>
+                                        Cancel
+                                      </Button>
+                                    </DialogTrigger>
                                   </div>
                                 </div>
                               </DialogContent>
@@ -734,7 +780,7 @@ export default function AdminOrdersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => exportOrderPDF(order)}
+                            onClick={() => generateOrderPDF(order as any)}
                           >
                             <FileText className="h-4 w-4" />
                           </Button>

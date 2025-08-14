@@ -78,6 +78,13 @@ export default function RegisterPage() {
     }
 
     try {
+      // Log form values before sending
+      console.log('Submitting registration form:', {
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+      });
       // Call API route to register customer and check for duplicates
       const res = await fetch('/api/register', {
         method: 'POST',
@@ -124,26 +131,26 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
       <Navbar />
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center py-8 sm:py-12 px-2 sm:px-6 lg:px-8">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-orange-600 sparkle-animation" />
+              <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-orange-600 sparkle-animation" />
             </div>
-            <CardTitle className="text-2xl font-bold text-orange-800">Create Account</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl sm:text-2xl font-bold text-orange-800">Create Account</CardTitle>
+            <CardDescription className="text-xs sm:text-base">
               Join CrackersHub for amazing deals and celebrations
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
-              <div className="space-y-2">
+
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -154,13 +161,13 @@ export default function RegisterPage() {
                     placeholder="Enter your full name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -171,13 +178,13 @@ export default function RegisterPage() {
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -188,13 +195,13 @@ export default function RegisterPage() {
                     placeholder="Enter your phone number"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -205,7 +212,7 @@ export default function RegisterPage() {
                     placeholder="Create a password (min 6 characters)"
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 text-sm sm:text-base"
                     required
                     minLength={6}
                   />
@@ -225,7 +232,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -236,7 +243,7 @@ export default function RegisterPage() {
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 text-sm sm:text-base"
                     required
                   />
                   <Button
@@ -257,15 +264,15 @@ export default function RegisterPage() {
 
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-sm sm:text-base"
                 disabled={loading}
               >
                 {loading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-center text-sm text-gray-600">
+            <div className="mt-4 sm:mt-6 text-center">
+              <p className="text-center text-xs sm:text-sm text-gray-600">
                 Already have an account?{" "}
                 <Link href="/login" className="text-orange-600 hover:text-orange-700 font-medium">
                   Sign in

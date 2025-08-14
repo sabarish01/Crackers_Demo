@@ -29,10 +29,22 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   }
 
   if (loading) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <span className="text-lg font-semibold text-gray-700">Loading admin session...</span>
+        </div>
+      </div>
+    );
   }
   if (!admin) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <span className="text-lg font-semibold text-red-600">Admin session not found.</span>
+        </div>
+      </div>
+    );
   }
 
   const navigation = [

@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { login } = useAuth()
+  const { login, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -77,29 +77,36 @@ export default function LoginPage() {
     }
   }
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
+        <span className="text-lg font-semibold text-gray-700">Loading session...</span>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
       <Navbar />
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center py-8 sm:py-12 px-2 sm:px-6 lg:px-8">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-orange-600 sparkle-animation" />
+              <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-orange-600 sparkle-animation" />
             </div>
-            <CardTitle className="text-2xl font-bold text-orange-800">Welcome Back</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl sm:text-2xl font-bold text-orange-800">Welcome Back</CardTitle>
+            <CardDescription className="text-xs sm:text-base">
               Sign in to your CrackersHub account
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
-              <div className="space-y-2">
+              {/* ...existing code... */}
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -109,13 +116,12 @@ export default function LoginPage() {
                     placeholder="Enter your phone number"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="pl-10"
+                    className="pl-10 text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
-
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -125,7 +131,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 text-sm sm:text-base"
                     required
                   />
                   <Button
@@ -143,24 +149,21 @@ export default function LoginPage() {
                   </Button>
                 </div>
               </div>
-
               <div className="text-right">
-                <Link href="/forgot-password" className="text-sm text-orange-600 hover:text-orange-700">
+                <Link href="/forgot-password" className="text-xs sm:text-sm text-orange-600 hover:text-orange-700">
                   Forgot password?
                 </Link>
               </div>
-
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-sm sm:text-base"
                 disabled={loading}
               >
                 {loading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-center text-sm text-gray-600">
+            <div className="mt-4 sm:mt-6 text-center">
+              <p className="text-center text-xs sm:text-sm text-gray-600">
                 {"Don't have an account? "}
                 <Link href="/register" className="text-orange-600 hover:text-orange-700 font-medium">
                   Sign up
